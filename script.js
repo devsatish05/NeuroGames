@@ -121,7 +121,14 @@ function saveState() {
 }
 
 function todayKey() {
-    return new Date().toISOString().slice(0, 10);
+    return localDateKey(new Date());
+}
+
+function localDateKey(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
 
 function createProfile(name, age) {
@@ -611,16 +618,17 @@ function finishSession() {
     const duration = Math.max(5, Math.round((Date.now() - currentSession.startedAt) / 1000));
     const percent = currentSession.total ? Math.round((currentSession.score / currentSession.total) * 100) : 0;
 
-    const isBehaviorSession = currentSession.category === 'Behavior';
+    const sessionCategory = currentSession.category;
+    const isBehaviorSession = sessionCategory === 'Behavior';
     const difficultyBonus = isBehaviorSession ? 0 : currentSession.difficulty === 'Hard' ? 30 : currentSession.difficulty === 'Medium' ? 15 : 5;
-    const baseXp = isBehaviorSession ? 0 : currentSession.score * 20 + difficultyBonus;
+    const baseXp = isBehaviorSession ? currentSession.score * 10 : currentSession.score * 20 + difficultyBonus;
     const today = todayKey();
     const dailyBonus = profile.dailyBonusLog[today] ? 0 : 20;
     profile.dailyBonusLog[today] = true;
 
     const session = {
         date: Date.now(),
-        category: currentSession.category,
+        category: sessionCategory,
         mode: currentSession.mode,
         difficulty: currentSession.difficulty,
         score: currentSession.score,
@@ -631,7 +639,7 @@ function finishSession() {
 
     profile.sessions.push(session);
     profile.completedSessions += 1;
-    profile.timeSpent[currentSession.category] = (profile.timeSpent[currentSession.category] || 0) + duration;
+    profile.timeSpent[sessionCategory] = (profile.timeSpent[sessionCategory] || 0) + duration;
     profile.totalXp += baseXp + dailyBonus;
     profile.level = xpToLevel(profile.totalXp);
 
@@ -641,7 +649,7 @@ function finishSession() {
 
     const growthText = ['IQ', 'Memory', 'Pattern'].map((c) => `${c}: ${formatPercent(categoryGrowth(profile, c))}`).join(' | ');
     document.getElementById('sessionSummary').innerHTML = `
-        <h3>${currentSession.category} Session Complete!</h3>
+        <h3>${sessionCategory} Session Complete!</h3>
         <p><strong>Score:</strong> ${currentSession.score}/${currentSession.total} (${percent}%)</p>
         <p><strong>XP Earned:</strong> ${baseXp + dailyBonus} (includes ${dailyBonus} daily bonus)</p>
         <p><strong>Level:</strong> ${profile.level}/5</p>
@@ -652,8 +660,8 @@ function finishSession() {
     showScreen('resultsScreen');
     renderAll();
 
-    if (percent >= 80) postBrainyMessage('brainy', `Amazing work! ${percent}% in ${currentSession.category}. You're growing fast! 🎉`);
-    else postBrainyMessage('brainy', `Nice effort! Keep practicing ${currentSession.category} to boost your mastery. 💪`);
+    if (percent >= 80) postBrainyMessage('brainy', `Amazing work! ${percent}% in ${sessionCategory}. You're growing fast! 🎉`);
+    else postBrainyMessage('brainy', `Nice effort! Keep practicing ${sessionCategory} to boost your mastery. 💪`);
 
     currentSession = null;
 }
@@ -683,9 +691,12 @@ function renderBehaviorMentor() {
         card.querySelector('button').addEventListener('click', () => {
             if (done) return;
             profile.mentorLog[today][challenge.id] = true;
-            profile.totalXp += challenge.xp;
+            const behaviorSessionActive = currentSession && currentSession.category === 'Behavior';
+            if (!behaviorSessionActive) {
+                profile.totalXp += challenge.xp;
+            }
             profile.level = xpToLevel(profile.totalXp);
-            if (currentSession && currentSession.category === 'Behavior') {
+            if (behaviorSessionActive) {
                 currentSession.score = todayMentorComplete(profile);
                 if (currentSession.score >= FITNESS_CHALLENGES.length) {
                     currentSession.total = FITNESS_CHALLENGES.length;
@@ -822,7 +833,9 @@ function postBrainyMessage(role, text) {
 
 function updateStreak(profile) {
     const today = todayKey();
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterday = localDateKey(yesterdayDate);
     if (profile.lastPlayedDate === today) return;
     if (profile.lastPlayedDate === yesterday) profile.streak += 1;
     else profile.streak = 1;
