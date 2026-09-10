@@ -3,131 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🧠 NeuroGames - Brain Teaser Quiz for Kids</title>
+    <title>🧠 NeuroGames - Cognitive Growth Platform</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="stars-background"></div>
-    
-    <div class="container">
-        <!-- Welcome Screen -->
-        <div id="welcomeScreen" class="screen welcome-screen">
-            <div class="welcome-content">
-                <h1 class="welcome-title">🧠 NeuroGames 🎮</h1>
-                <p class="welcome-subtitle">Brain Teaser Quiz for Super Smart Kids!</p>
-                
-                <div class="emoji-animation">
-                    <span class="emoji">🎯</span>
-                    <span class="emoji">🚀</span>
-                    <span class="emoji">⭐</span>
-                    <span class="emoji">🎉</span>
-                </div>
-                
-                <div class="welcome-description">
-                    <p>Test your brain power with fun riddles and brain teasers!</p>
-                    <p>Answer correctly and collect stars ⭐</p>
-                </div>
-                
-                <button id="startBtn" class="btn btn-primary btn-large">
-                    🎮 Start Quiz
-                </button>
-                
-                <div class="welcome-info">
-                    <p><strong>📝 10 Questions</strong> | <strong>⭐ Earn Stars</strong> | <strong>🏆 Get Badge</strong></p>
-                </div>
+    <div class="app-shell">
+        <header class="topbar">
+            <h1>🧠 NeuroGames</h1>
+            <div class="topbar-right">
+                <span id="activeProfileLabel">No profile selected</span>
+                <button id="chatToggleBtn" class="btn btn-secondary">🤖 Brainy</button>
             </div>
-        </div>
+        </header>
 
-        <!-- Quiz Screen -->
-        <div id="quizScreen" class="screen quiz-screen" style="display: none;">
-            <!-- Header -->
-            <div class="quiz-header">
-                <div class="score-container">
-                    <span class="stars-earned">⭐ Stars: <span id="starCount">0</span></span>
+        <nav id="mainNav" class="main-nav hidden">
+            <button class="nav-btn" data-screen="homeDashboard">Home</button>
+            <button class="nav-btn" data-screen="gameSelection">Games</button>
+            <button class="nav-btn" data-screen="behaviorMentor">Behavior Mentor</button>
+            <button class="nav-btn" data-screen="resultsScreen">Results</button>
+            <button class="nav-btn" data-screen="parentDashboard">Parent Dashboard</button>
+            <button class="nav-btn" data-screen="achievementGallery">Achievements</button>
+            <button class="nav-btn" data-screen="settingsScreen">Settings</button>
+        </nav>
+
+        <main>
+            <section id="loginProfile" class="screen active">
+                <h2>👋 Welcome! Choose a Profile</h2>
+                <div class="card">
+                    <div class="form-row">
+                        <input id="childNameInput" type="text" placeholder="Child name" maxlength="30">
+                        <input id="childAgeInput" type="number" min="7" max="12" placeholder="Age 7-12">
+                        <button id="createProfileBtn" class="btn btn-primary">Create Profile</button>
+                    </div>
+                    <div id="profileList" class="pill-list"></div>
                 </div>
-                <div class="question-counter">
-                    <span id="questionNumber">1</span> / <span id="totalQuestions">10</span>
-                </div>
-            </div>
+            </section>
 
-            <!-- Progress Bar -->
-            <div class="progress-bar">
-                <div id="progressFill" class="progress-fill"></div>
-            </div>
-
-            <!-- Question Card -->
-            <div class="question-card">
-                <div class="question-emoji">
-                    <span id="questionEmoji">🤔</span>
-                </div>
-                <h2 id="question" class="question-text">Question?</h2>
-                
-                <div class="options-container" id="optionsContainer">
-                    <!-- Options will be inserted here -->
-                </div>
-            </div>
-
-            <!-- Navigation Buttons -->
-            <div class="quiz-footer">
-                <button id="prevBtn" class="btn btn-secondary">← Previous</button>
-                <button id="nextBtn" class="btn btn-primary">Next →</button>
-            </div>
-        </div>
-
-        <!-- Results Screen -->
-        <div id="resultsScreen" class="screen results-screen" style="display: none;">
-            <div class="results-content">
-                <h1 class="results-title">Quiz Complete! 🎉</h1>
-                
-                <div class="score-display">
-                    <div class="score-circle">
-                        <span id="finalScore">0</span>/<span id="finalTotal">10</span>
+            <section id="homeDashboard" class="screen">
+                <h2>📊 Smart Dashboard</h2>
+                <div class="grid metrics-grid" id="metricsGrid"></div>
+                <div class="grid two-col">
+                    <div class="card">
+                        <h3>🎯 Performance Analytics</h3>
+                        <ul id="performanceList" class="stat-list"></ul>
+                    </div>
+                    <div class="card">
+                        <h3>🧭 Interest Mapping</h3>
+                        <div id="interestMapping"></div>
                     </div>
                 </div>
+                <div class="card">
+                    <h3>🏅 Recent Achievements</h3>
+                    <div id="recentAchievements" class="badge-grid"></div>
+                </div>
+            </section>
 
-                <div class="stars-display">
-                    <p class="stars-title">Stars Earned:</p>
-                    <div id="starsEarned" class="stars-earned-display">
-                        <!-- Stars will be displayed here -->
+            <section id="gameSelection" class="screen">
+                <h2>🎮 Game Selection</h2>
+                <div class="form-row">
+                    <label>Difficulty
+                        <select id="difficultySelect">
+                            <option value="Easy">Easy</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Hard">Hard</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="grid game-grid" id="gameCards"></div>
+            </section>
+
+            <section id="gamePlay" class="screen">
+                <div class="card">
+                    <div class="play-header">
+                        <h2 id="playTitle">Game Play</h2>
+                        <div id="playMeta"></div>
                     </div>
+                    <div id="gameArea"></div>
                 </div>
+            </section>
 
-                <div id="resultMessage" class="result-message">
-                    <!-- Personalized message based on score -->
+            <section id="resultsScreen" class="screen">
+                <h2>🏁 Session Results</h2>
+                <div class="card">
+                    <div id="sessionSummary"></div>
+                    <button id="playAgainBtn" class="btn btn-primary">Play Another Game</button>
                 </div>
+            </section>
 
-                <div class="achievement-badges">
-                    <div id="badge" class="badge-container">
-                        <!-- Badge will appear here -->
-                    </div>
+            <section id="parentDashboard" class="screen">
+                <h2>👨‍👩‍👧 Parent/Educator Dashboard</h2>
+                <div class="grid two-col">
+                    <div class="card"><h3>Weekly Growth</h3><div id="weeklyGrowth"></div></div>
+                    <div class="card"><h3>Monthly Growth</h3><div id="monthlyGrowth"></div></div>
                 </div>
-
-                <div class="results-button-group">
-                    <button id="restartBtn" class="btn btn-primary btn-large">
-                        🔄 Play Again
-                    </button>
-                    <button id="reviewBtn" class="btn btn-secondary btn-large">
-                        📖 Review Answers
-                    </button>
+                <div class="grid two-col">
+                    <div class="card"><h3>Game Performance Breakdown</h3><div id="gameBreakdown"></div></div>
+                    <div class="card"><h3>Time & Behavior Insights</h3><div id="timeInsights"></div></div>
                 </div>
-            </div>
-        </div>
+            </section>
 
-        <!-- Review Screen -->
-        <div id="reviewScreen" class="screen review-screen" style="display: none;">
-            <div class="review-header">
-                <h2>📖 Review Your Answers</h2>
-                <button id="backToResultsBtn" class="btn btn-secondary">← Back</button>
-            </div>
+            <section id="behaviorMentor" class="screen">
+                <h2>💪 Behavior Mentor</h2>
+                <div class="card">
+                    <h3>Daily Sports & Fitness Challenges</h3>
+                    <div id="fitnessChallenges" class="grid four-col"></div>
+                </div>
+                <div class="card">
+                    <h3>Healthy Habit Tips</h3>
+                    <ul id="habitTips"></ul>
+                </div>
+            </section>
 
-            <div id="reviewContainer" class="review-container">
-                <!-- Review items will be inserted here -->
-            </div>
-        </div>
+            <section id="achievementGallery" class="screen">
+                <h2>🏆 Achievement Gallery</h2>
+                <div id="achievementGrid" class="badge-grid"></div>
+            </section>
+
+            <section id="settingsScreen" class="screen">
+                <h2>⚙️ Settings</h2>
+                <div class="card">
+                    <label><input id="notifyToggle" type="checkbox"> Notifications enabled</label>
+                    <label><input id="chatbotToggle" type="checkbox"> Brainy Chatbox enabled</label>
+                    <label><input id="parentControlToggle" type="checkbox"> Parental controls enabled</label>
+                    <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+                </div>
+            </section>
+        </main>
     </div>
 
-    <!-- Celebration Confetti -->
-    <div id="confetti" class="confetti"></div>
+    <aside id="brainyPanel" class="brainy-panel hidden" role="dialog" aria-modal="false" aria-labelledby="brainyTitle">
+        <div class="brainy-header">
+            <h3 id="brainyTitle">🤖 Brainy Chatbox</h3>
+            <button id="closeBrainyBtn" class="btn btn-secondary">Close</button>
+        </div>
+        <div id="brainyMessages" class="brainy-messages" role="status" aria-live="polite" aria-atomic="false"></div>
+        <div class="form-row">
+            <input id="brainyInput" type="text" placeholder="Ask Brainy for a hint..." aria-label="Brainy chat input">
+            <button id="brainySendBtn" class="btn btn-primary">Send</button>
+        </div>
+    </aside>
 
     <script src="script.js"></script>
 </body>
