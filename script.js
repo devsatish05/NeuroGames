@@ -85,6 +85,7 @@ const GAME_CATALOG = [
 
 let state = loadState();
 let currentSession = null;
+let sessionTimerId = null;
 
 function defaultState() {
     return {
@@ -103,7 +104,13 @@ function loadState() {
     if (!raw) return defaultState();
     try {
         const parsed = JSON.parse(raw);
-        return { ...defaultState(), ...parsed, settings: { ...defaultState().settings, ...(parsed.settings || {}) } };
+        const merged = { ...defaultState(), ...parsed, settings: { ...defaultState().settings, ...(parsed.settings || {}) } };
+        merged.profiles = (merged.profiles || []).map((profile) => ({ ...profile, id: profile.id || generateId() }));
+        if (!merged.activeProfileId && merged.profiles.length) merged.activeProfileId = merged.profiles[0].id;
+        if (merged.activeProfileId && !merged.profiles.some((p) => p.id === merged.activeProfileId) && merged.profiles.length) {
+            merged.activeProfileId = merged.profiles[0].id;
+        }
+        return merged;
     } catch {
         return defaultState();
     }
@@ -139,7 +146,8 @@ function createProfile(name, age) {
 }
 
 function getActiveProfile() {
-    return state.profiles.find((p) => p.id === state.activeProfileId) || null;
+    if (!state.profiles.length) return null;
+    return state.profiles.find((p) => p.id === state.activeProfileId) || state.profiles[0];
 }
 
 function setActiveProfile(id) {
@@ -330,15 +338,38 @@ function renderGameCards() {
         const locked = profile.level < game.unlockLevel;
         const div = document.createElement('div');
         div.className = `game-card ${locked ? 'locked' : ''}`;
-        div.innerHTML = `
-            <h3>${game.title}</h3>
-            <p>${game.desc}</p>
-            <p><small>Unlock level: ${game.unlockLevel}</small></p>
-            ${game.modes.length > 1 ? `<label>Mode <select class="mode-select">${game.modes.map((m) => `<option value="${m}">${m}</option>`).join('')}</select></label>` : ''}
-            <button class="btn btn-primary start-game-btn" ${locked ? 'disabled' : ''}>${locked ? 'Locked' : 'Start'} (${difficulty})</button>
-        `;
+        const title = document.createElement('h3');
+        title.textContent = game.title;
+        const desc = document.createElement('p');
+        desc.textContent = game.desc;
+        const unlock = document.createElement('p');
+        const unlockSmall = document.createElement('small');
+        unlockSmall.textContent = `Unlock level: ${game.unlockLevel}`;
+        unlock.appendChild(unlockSmall);
+        div.append(title, desc, unlock);
 
-        div.querySelector('.start-game-btn').addEventListener('click', () => {
+        if (game.modes.length > 1) {
+            const modeLabel = document.createElement('label');
+            modeLabel.textContent = 'Mode ';
+            const modeSelect = document.createElement('select');
+            modeSelect.className = 'mode-select';
+            game.modes.forEach((modeValue) => {
+                const option = document.createElement('option');
+                option.value = modeValue;
+                option.textContent = modeValue;
+                modeSelect.appendChild(option);
+            });
+            modeLabel.appendChild(modeSelect);
+            div.appendChild(modeLabel);
+        }
+
+        const startButton = document.createElement('button');
+        startButton.className = 'btn btn-primary start-game-btn';
+        startButton.disabled = locked;
+        startButton.textContent = `${locked ? 'Locked' : 'Start'} (${difficulty})`;
+        div.appendChild(startButton);
+
+        startButton.addEventListener('click', () => {
             const mode = div.querySelector('.mode-select')?.value || game.modes[0];
             startGame(game.id, difficulty, mode);
         });
@@ -350,6 +381,7 @@ function startGame(category, difficulty, mode) {
     const profile = getActiveProfile();
     if (!profile) return;
 
+    clearSessionTimer();
     profile.startedSessions += 1;
     saveState();
 
@@ -498,12 +530,14 @@ function runNumberRecall(difficulty) {
     currentSession.score = 0;
 
     const playRound = () => {
+        const sessionRef = currentSession;
         const len = base + round;
         const sequence = Array.from({ length: len }, () => Math.floor(Math.random() * 10)).join('');
         const gameArea = document.getElementById('gameArea');
         gameArea.innerHTML = `<p>Round ${round + 1}/${rounds}</p><h3>Remember: <span id="seqView">${sequence}</span></h3><p>Memorize quickly...</p>`;
 
-        setTimeout(() => {
+        sessionTimerId = setTimeout(() => {
+            if (!currentSession || currentSession !== sessionRef) return;
             gameArea.innerHTML = `
                 <p>Round ${round + 1}/${rounds}</p>
                 <input id="seqInput" type="text" placeholder="Type the full sequence">
@@ -531,6 +565,7 @@ function runPatternMemory(difficulty) {
     currentSession.score = 0;
 
     const playRound = () => {
+        const sessionRef = currentSession;
         const len = base + round;
         const sequence = Array.from({ length: len }, () => PATTERN_TOKENS[Math.floor(Math.random() * PATTERN_TOKENS.length)]);
         let answer = [];
@@ -538,7 +573,8 @@ function runPatternMemory(difficulty) {
         const gameArea = document.getElementById('gameArea');
         gameArea.innerHTML = `<p>Round ${round + 1}/${rounds}</p><h3>Remember: ${sequence.join(' ')}</h3>`;
 
-        setTimeout(() => {
+        sessionTimerId = setTimeout(() => {
+            if (!currentSession || currentSession !== sessionRef) return;
             gameArea.innerHTML = `
                 <p>Round ${round + 1}/${rounds}</p>
                 <p>Select sequence in order:</p>
@@ -570,6 +606,7 @@ function runPatternMemory(difficulty) {
 function finishSession() {
     const profile = getActiveProfile();
     if (!profile || !currentSession) return;
+    clearSessionTimer();
 
     const duration = Math.max(5, Math.round((Date.now() - currentSession.startedAt) / 1000));
     const percent = currentSession.total ? Math.round((currentSession.score / currentSession.total) * 100) : 0;
@@ -886,6 +923,13 @@ function shuffle(arr) {
 function generateId() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
     return `profile-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function clearSessionTimer() {
+    if (sessionTimerId) {
+        clearTimeout(sessionTimerId);
+        sessionTimerId = null;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', init);
