@@ -551,6 +551,7 @@ function runNumberRecall(difficulty) {
                 <button id="checkSeqBtn" class="btn btn-primary">Submit</button>
             `;
             document.getElementById('checkSeqBtn').addEventListener('click', () => {
+                if (!currentSession || currentSession !== sessionRef) return;
                 const value = document.getElementById('seqInput').value.trim();
                 if (value === sequence) currentSession.score += 1;
                 round += 1;
@@ -592,12 +593,14 @@ function runPatternMemory(difficulty) {
 
             gameArea.querySelectorAll('.memory-seq-btn').forEach((btn) => {
                 btn.addEventListener('click', () => {
+                    if (!currentSession || currentSession !== sessionRef) return;
                     answer.push(btn.dataset.token);
                     document.getElementById('answerPreview').textContent = answer.join(' ');
                 });
             });
 
             document.getElementById('submitPatternBtn').addEventListener('click', () => {
+                if (!currentSession || currentSession !== sessionRef) return;
                 if (answer.join('|') === sequence.join('|')) currentSession.score += 1;
                 round += 1;
                 if (round >= rounds) finishSession();
@@ -621,7 +624,7 @@ function finishSession() {
     const sessionCategory = currentSession.category;
     const isBehaviorSession = sessionCategory === 'Behavior';
     const difficultyBonus = isBehaviorSession ? 0 : currentSession.difficulty === 'Hard' ? 30 : currentSession.difficulty === 'Medium' ? 15 : 5;
-    const baseXp = isBehaviorSession ? currentSession.score * 10 : currentSession.score * 20 + difficultyBonus;
+    const baseXp = isBehaviorSession ? 0 : currentSession.score * 20 + difficultyBonus;
     const today = todayKey();
     const dailyBonus = profile.dailyBonusLog[today] ? 0 : 20;
     profile.dailyBonusLog[today] = true;
@@ -692,9 +695,7 @@ function renderBehaviorMentor() {
             if (done) return;
             profile.mentorLog[today][challenge.id] = true;
             const behaviorSessionActive = currentSession && currentSession.category === 'Behavior';
-            if (!behaviorSessionActive) {
-                profile.totalXp += challenge.xp;
-            }
+            profile.totalXp += challenge.xp;
             profile.level = xpToLevel(profile.totalXp);
             if (behaviorSessionActive) {
                 currentSession.score = todayMentorComplete(profile);
