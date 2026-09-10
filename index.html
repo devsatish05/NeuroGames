@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧠 NeuroGames - Brain Teaser Quiz for Kids</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="stars-background"></div>
+    
+    <div class="container">
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="screen welcome-screen">
+            <div class="welcome-content">
+                <h1 class="welcome-title">🧠 NeuroGames 🎮</h1>
+                <p class="welcome-subtitle">Brain Teaser Quiz for Super Smart Kids!</p>
+                
+                <div class="emoji-animation">
+                    <span class="emoji">🎯</span>
+                    <span class="emoji">🚀</span>
+                    <span class="emoji">⭐</span>
+                    <span class="emoji">🎉</span>
+                </div>
+                
+                <div class="welcome-description">
+                    <p>Test your brain power with fun riddles and brain teasers!</p>
+                    <p>Answer correctly and collect stars ⭐</p>
+                </div>
+                
+                <button id="startBtn" class="btn btn-primary btn-large">
+                    🎮 Start Quiz
+                </button>
+                
+                <div class="welcome-info">
+                    <p><strong>📝 10 Questions</strong> | <strong>⭐ Earn Stars</strong> | <strong>🏆 Get Badge</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quizScreen" class="screen quiz-screen" style="display: none;">
+            <!-- Header -->
+            <div class="quiz-header">
+                <div class="score-container">
+                    <span class="stars-earned">⭐ Stars: <span id="starCount">0</span></span>
+                </div>
+                <div class="question-counter">
+                    <span id="questionNumber">1</span> / <span id="totalQuestions">10</span>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+
+            <!-- Question Card -->
+            <div class="question-card">
+                <div class="question-emoji">
+                    <span id="questionEmoji">🤔</span>
+                </div>
+                <h2 id="question" class="question-text">Question?</h2>
+                
+                <div class="options-container" id="optionsContainer">
+                    <!-- Options will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="quiz-footer">
+                <button id="prevBtn" class="btn btn-secondary">← Previous</button>
+                <button id="nextBtn" class="btn btn-primary">Next →</button>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultsScreen" class="screen results-screen" style="display: none;">
+            <div class="results-content">
+                <h1 class="results-title">Quiz Complete! 🎉</h1>
+                
+                <div class="score-display">
+                    <div class="score-circle">
+                        <span id="finalScore">0</span>/<span id="finalTotal">10</span>
+                    </div>
+                </div>
+
+                <div class="stars-display">
+                    <p class="stars-title">Stars Earned:</p>
+                    <div id="starsEarned" class="stars-earned-display">
+                        <!-- Stars will be displayed here -->
+                    </div>
+                </div>
+
+                <div id="resultMessage" class="result-message">
+                    <!-- Personalized message based on score -->
+                </div>
+
+                <div class="achievement-badges">
+                    <div id="badge" class="badge-container">
+                        <!-- Badge will appear here -->
+                    </div>
+                </div>
+
+                <div class="results-button-group">
+                    <button id="restartBtn" class="btn btn-primary btn-large">
+                        🔄 Play Again
+                    </button>
+                    <button id="reviewBtn" class="btn btn-secondary btn-large">
+                        📖 Review Answers
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Review Screen -->
+        <div id="reviewScreen" class="screen review-screen" style="display: none;">
+            <div class="review-header">
+                <h2>📖 Review Your Answers</h2>
+                <button id="backToResultsBtn" class="btn btn-secondary">← Back</button>
+            </div>
+
+            <div id="reviewContainer" class="review-container">
+                <!-- Review items will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Celebration Confetti -->
+    <div id="confetti" class="confetti"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
