@@ -119,7 +119,7 @@ function todayKey() {
 
 function createProfile(name, age) {
     return {
-        id: crypto.randomUUID(),
+        id: generateId(),
         name,
         age,
         createdAt: Date.now(),
@@ -155,6 +155,12 @@ function showScreen(screenId) {
     document.querySelectorAll('.nav-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.screen === screenId);
     });
+    const activeScreen = document.getElementById(screenId);
+    const focusTarget = activeScreen?.querySelector('h2') || activeScreen;
+    if (focusTarget) {
+        focusTarget.setAttribute('tabindex', '-1');
+        focusTarget.focus();
+    }
 }
 
 function init() {
@@ -295,7 +301,7 @@ function renderDashboard() {
 function renderLeaderboard(activeId) {
     const list = [...state.profiles].sort((a, b) => b.totalXp - a.totalXp).slice(0, 5);
     if (!list.length) return '';
-    return `<p><strong>Local Leaderboard:</strong></p>${list.map((p, idx) => `<p>${idx + 1}. ${p.id === activeId ? '👉 ' : ''}${p.name} - ${p.totalXp} XP</p>`).join('')}`;
+    return `<p><strong>Local Leaderboard:</strong></p>${list.map((p, idx) => `<p>${idx + 1}. ${p.id === activeId ? '👉 ' : ''}${escapeHtml(p.name)} - ${p.totalXp} XP</p>`).join('')}`;
 }
 
 function renderGameCards() {
@@ -401,6 +407,11 @@ function runQuizMode(questionPool, title) {
 
         document.getElementById('hintBtn').addEventListener('click', () => {
             currentSession.hintsUsed += 1;
+            const profile = getActiveProfile();
+            if (profile) {
+                profile.brainyHintsUsed += 1;
+                saveState();
+            }
             postBrainyMessage('brainy', `Hint: ${q.hint}`);
             alert(`Hint: ${q.hint}`);
         });
@@ -549,8 +560,9 @@ function finishSession() {
     const duration = Math.max(5, Math.round((Date.now() - currentSession.startedAt) / 1000));
     const percent = currentSession.total ? Math.round((currentSession.score / currentSession.total) * 100) : 0;
 
-    const difficultyBonus = currentSession.difficulty === 'Hard' ? 30 : currentSession.difficulty === 'Medium' ? 15 : 5;
-    const baseXp = currentSession.score * 20 + difficultyBonus;
+    const isBehaviorSession = currentSession.category === 'Behavior';
+    const difficultyBonus = isBehaviorSession ? 0 : currentSession.difficulty === 'Hard' ? 30 : currentSession.difficulty === 'Medium' ? 15 : 5;
+    const baseXp = isBehaviorSession ? 0 : currentSession.score * 20 + difficultyBonus;
     const today = todayKey();
     const dailyBonus = profile.dailyBonusLog[today] ? 0 : 20;
     profile.dailyBonusLog[today] = true;
@@ -849,6 +861,20 @@ function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+
+    function generateId() {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+        return `profile-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('\"', '&quot;')
+            .replaceAll("'", '&#39;');
     }
     return arr;
 }
