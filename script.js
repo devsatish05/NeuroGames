@@ -285,12 +285,15 @@ function renderDashboard() {
 
     const best = bestCategory(profile);
     const weak = weakestCategory(profile);
-    interest.innerHTML = `
-        <p><strong>Strength:</strong> ${best || 'Not enough data'}</p>
-        <p><strong>Needs focus:</strong> ${weak || 'Keep playing all categories'}</p>
-        <p><strong>Recommendation:</strong> ${recommendation(profile)}</p>
-        ${renderLeaderboard(profile.id)}
-    `;
+    interest.innerHTML = '';
+    const strengthP = document.createElement('p');
+    strengthP.textContent = `Strength: ${best || 'Not enough data'}`;
+    const weakP = document.createElement('p');
+    weakP.textContent = `Needs focus: ${weak || 'Keep playing all categories'}`;
+    const recP = document.createElement('p');
+    recP.textContent = `Recommendation: ${recommendation(profile)}`;
+    interest.append(strengthP, weakP, recP);
+    interest.appendChild(renderLeaderboard(profile.id));
 
     const unlocked = profile.badges.slice(-6).map((id) => ACHIEVEMENTS.find((a) => a.id === id)).filter(Boolean);
     recentAchievements.innerHTML = unlocked.length
@@ -300,8 +303,19 @@ function renderDashboard() {
 
 function renderLeaderboard(activeId) {
     const list = [...state.profiles].sort((a, b) => b.totalXp - a.totalXp).slice(0, 5);
-    if (!list.length) return '';
-    return `<p><strong>Local Leaderboard:</strong></p>${list.map((p, idx) => `<p>${idx + 1}. ${p.id === activeId ? '👉 ' : ''}${escapeHtml(p.name)} - ${p.totalXp} XP</p>`).join('')}`;
+    const container = document.createElement('div');
+    if (!list.length) return container;
+    const title = document.createElement('p');
+    const strong = document.createElement('strong');
+    strong.textContent = 'Local Leaderboard:';
+    title.appendChild(strong);
+    container.appendChild(title);
+    list.forEach((p, idx) => {
+        const row = document.createElement('p');
+        row.textContent = `${idx + 1}. ${p.id === activeId ? '👉 ' : ''}${p.name} - ${p.totalXp} XP`;
+        container.appendChild(row);
+    });
+    return container;
 }
 
 function renderGameCards() {
@@ -733,8 +747,10 @@ function sendBrainy() {
     if (lower.includes('hint')) {
         if (currentSession) {
             currentSession.hintsUsed += 1;
-            profile.brainyHintsUsed += 1;
-            saveState();
+            if (profile) {
+                profile.brainyHintsUsed += 1;
+                saveState();
+            }
             if (currentSession.category === 'IQ') reply = 'IQ Tip: break the problem into small clues and eliminate wrong options.';
             if (currentSession.category === 'Pattern') reply = 'Pattern Tip: look for repeat cycles, rotations, or +2/+3 changes.';
             if (currentSession.category === 'Memory') reply = 'Memory Tip: chunk information into smaller groups and repeat aloud.';
@@ -751,9 +767,11 @@ function sendBrainy() {
     }
 
     postBrainyMessage('brainy', reply);
-    unlockAchievements(profile);
-    saveState();
-    renderAll();
+    if (profile) {
+        unlockAchievements(profile);
+        saveState();
+        renderAll();
+    }
 }
 
 function postBrainyMessage(role, text) {
@@ -862,21 +880,12 @@ function shuffle(arr) {
         const j = Math.floor(Math.random() * (i + 1));
         [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-
-    function generateId() {
-        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
-        return `profile-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-    }
-
-    function escapeHtml(value) {
-        return String(value)
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('\"', '&quot;')
-            .replaceAll("'", '&#39;');
-    }
     return arr;
+}
+
+function generateId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    return `profile-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 }
 
 document.addEventListener('DOMContentLoaded', init);
