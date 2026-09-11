@@ -108,10 +108,11 @@ let currentSession = null;
 let sessionTimerId = null;
 let selectedAvatar = AVATAR_OPTIONS[0];
 let audioContext = null;
-let musicIntervalId = null;
 let loadingTimeoutIds = [];
 let overlayHideTimeoutId = null;
 let audioResumePromise = null;
+let backgroundMusicNodes = null;
+let transitionAnnouncementId = null;
 
 function defaultState() {
     return {
@@ -1055,7 +1056,11 @@ function animateLoadingSequence() {
 function announceScreenChange(screenId) {
     const status = document.getElementById('transitionStatus');
     if (!status) return;
-    status.textContent = `Opened ${screenLabel(screenId)}.`;
+    status.textContent = '';
+    if (transitionAnnouncementId) clearTimeout(transitionAnnouncementId);
+    transitionAnnouncementId = setTimeout(() => {
+        status.textContent = `Opened ${screenLabel(screenId)}.`;
+    }, 20);
 }
 
 function screenLabel(screenId) {
@@ -1203,19 +1208,21 @@ function playSound(kind) {
 
 function syncMusic() {
     if (!state.settings.musicEnabled || !state.settings.soundEnabled || document.hidden) {
-        if (musicIntervalId) clearInterval(musicIntervalId);
-        musicIntervalId = null;
+        stopBackgroundMusic();
         return;
     }
     activateAudioContext();
-    if (!audioContext || musicIntervalId) return;
-    const notes = [392, 523, 587, 523];
-    let idx = 0;
-    musicIntervalId = setInterval(() => {
-        if (!state.settings.musicEnabled || !state.settings.soundEnabled) return;
-        playTone(notes[idx % notes.length], 0.22, 'sine', 0.008);
-        idx += 1;
-    }, 900);
+    if (!audioContext) return;
+    if (audioContext.state === 'suspended') {
+        if (!audioResumePromise) {
+            audioResumePromise = audioContext.resume().catch(() => {}).finally(() => {
+                audioResumePromise = null;
+            });
+        }
+        audioResumePromise.then(() => syncMusic());
+        return;
+    }
+    startBackgroundMusic();
 }
 
 function prefersReducedMotion() {
@@ -1239,6 +1246,43 @@ function formatGrowthMetric(label, rawValue, themeClass, icon) {
 
 function clampNumber(value, min, max) {
     return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function startBackgroundMusic() {
+    if (backgroundMusicNodes || !audioContext) return;
+    const musicOsc = audioContext.createOscillator();
+    const musicGain = audioContext.createGain();
+    const lfo = audioContext.createOscillator();
+    const lfoGain = audioContext.createGain();
+
+    musicOsc.type = 'triangle';
+    musicOsc.frequency.setValueAtTime(261.63, audioContext.currentTime);
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(0.18, audioContext.currentTime);
+    lfoGain.gain.setValueAtTime(36, audioContext.currentTime);
+    musicGain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+    musicGain.gain.exponentialRampToValueAtTime(0.006, audioContext.currentTime + 0.25);
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(musicOsc.frequency);
+    musicOsc.connect(musicGain);
+    musicGain.connect(audioContext.destination);
+
+    musicOsc.start();
+    lfo.start();
+    backgroundMusicNodes = { musicOsc, musicGain, lfo, lfoGain };
+}
+
+function stopBackgroundMusic() {
+    if (!backgroundMusicNodes || !audioContext) return;
+    const { musicOsc, musicGain, lfo } = backgroundMusicNodes;
+    const now = audioContext.currentTime;
+    musicGain.gain.cancelScheduledValues(now);
+    musicGain.gain.setValueAtTime(Math.max(musicGain.gain.value, 0.0001), now);
+    musicGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+    musicOsc.stop(now + 0.14);
+    lfo.stop(now + 0.14);
+    backgroundMusicNodes = null;
 }
 
 function updateStreak(profile) {
