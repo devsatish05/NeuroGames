@@ -109,6 +109,9 @@ let sessionTimerId = null;
 let selectedAvatar = AVATAR_OPTIONS[0];
 let audioContext = null;
 let musicIntervalId = null;
+let loadingTimeoutIds = [];
+let overlayHideTimeoutId = null;
+let audioResumePromise = null;
 
 function defaultState() {
     return {
@@ -451,10 +454,18 @@ function renderGameCards() {
         unlock.appendChild(unlockSmall);
         const chips = document.createElement('div');
         chips.className = 'form-row';
-        chips.innerHTML = `<span class="theme-chip">${difficulty}</span><span class="difficulty-chip">${locked ? '🔒 Locked' : '✨ Ready to play'}</span>`;
+        const difficultyChip = document.createElement('span');
+        difficultyChip.className = 'theme-chip';
+        difficultyChip.textContent = difficulty;
+        const statusChip = document.createElement('span');
+        statusChip.className = 'difficulty-chip';
+        statusChip.textContent = locked ? '🔒 Locked' : '✨ Ready to play';
+        chips.append(difficultyChip, statusChip);
         const head = document.createElement('div');
         head.className = 'game-card-head';
-        head.innerHTML = `<span>${GAME_ICONS[game.id] || '🎮'}</span>`;
+        const icon = document.createElement('span');
+        icon.textContent = GAME_ICONS[game.id] || '🎮';
+        head.appendChild(icon);
         head.appendChild(title);
         div.append(head, desc, chips, unlock);
 
@@ -988,9 +999,14 @@ function renderAvatarOptions() {
         btn.className = `avatar-option ${index === 0 ? 'selected' : ''}`;
         btn.textContent = avatar;
         btn.setAttribute('aria-label', `Choose avatar ${avatar}`);
+        btn.setAttribute('aria-pressed', index === 0 ? 'true' : 'false');
         btn.addEventListener('click', () => {
             selectedAvatar = avatar;
-            wrap.querySelectorAll('.avatar-option').forEach((option) => option.classList.toggle('selected', option === btn));
+            wrap.querySelectorAll('.avatar-option').forEach((option) => {
+                const isSelected = option === btn;
+                option.classList.toggle('selected', isSelected);
+                option.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+            });
             updateAvatarPreview();
         });
         wrap.appendChild(btn);
@@ -1013,14 +1029,16 @@ function animateLoadingSequence() {
     const percent = document.getElementById('loadingPercent');
     const hint = document.getElementById('loadingHint');
     if (!overlay || !progress || !percent || !hint) return;
+    clearLoadingTimers();
     [18, 44, 71, 100].forEach((value, index) => {
-        setTimeout(() => {
+        const timerId = setTimeout(() => {
             progress.style.width = `${value}%`;
             percent.textContent = `${value}%`;
             hint.textContent = LOADING_HINTS[index] || LOADING_HINTS[0];
         }, index * 220);
+        loadingTimeoutIds.push(timerId);
     });
-    setTimeout(() => overlay.classList.add('hidden'), 1100);
+    overlayHideTimeoutId = setTimeout(() => overlay.classList.add('hidden'), 1100);
 }
 
 function pulseLoadingHint(screenId) {
@@ -1029,11 +1047,12 @@ function pulseLoadingHint(screenId) {
     const progress = document.getElementById('loadingProgress');
     const percent = document.getElementById('loadingPercent');
     if (!overlay || !hint || !progress || !percent || prefersReducedMotion()) return;
+    clearLoadingTimers();
     overlay.classList.remove('hidden');
     hint.textContent = `Opening ${screenLabel(screenId)}...`;
     progress.style.width = '100%';
     percent.textContent = '100%';
-    setTimeout(() => overlay.classList.add('hidden'), 260);
+    overlayHideTimeoutId = setTimeout(() => overlay.classList.add('hidden'), 260);
 }
 
 function screenLabel(screenId) {
@@ -1122,6 +1141,15 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 3400);
 }
 
+function clearLoadingTimers() {
+    loadingTimeoutIds.forEach((timerId) => clearTimeout(timerId));
+    loadingTimeoutIds = [];
+    if (overlayHideTimeoutId) {
+        clearTimeout(overlayHideTimeoutId);
+        overlayHideTimeoutId = null;
+    }
+}
+
 function activateAudioContext() {
     if (audioContext || typeof window.AudioContext === 'undefined' && typeof window.webkitAudioContext === 'undefined') return;
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -1146,7 +1174,17 @@ function playTone(freq, duration, type = 'sine', volume = 0.03, when = 0) {
 function playSound(kind) {
     activateAudioContext();
     if (!state.settings.soundEnabled || !audioContext) return;
-    if (audioContext.state === 'suspended') audioContext.resume();
+    if (audioContext.state === 'suspended') {
+        if (!audioResumePromise) {
+            audioResumePromise = audioContext.resume().catch(() => {}).finally(() => {
+                audioResumePromise = null;
+            });
+        }
+        audioResumePromise.then(() => {
+            if (audioContext?.state === 'running') playSound(kind);
+        });
+        return;
+    }
     if (kind === 'click') playTone(520, 0.05, 'triangle', 0.018);
     if (kind === 'transition') playTone(420, 0.05, 'sine', 0.015, 0), playTone(620, 0.08, 'sine', 0.012, 0.04);
     if (kind === 'correct') playTone(660, 0.08, 'triangle', 0.028, 0), playTone(880, 0.12, 'triangle', 0.026, 0.08);
