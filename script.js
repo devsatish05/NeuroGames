@@ -112,7 +112,6 @@ let musicIntervalId = null;
 let loadingTimeoutIds = [];
 let overlayHideTimeoutId = null;
 let audioResumePromise = null;
-let pendingSoundKind = null;
 
 function defaultState() {
     return {
@@ -278,7 +277,11 @@ function bindEvents() {
 
     document.addEventListener('click', (event) => {
         const target = event.target.closest('button, .pill, .avatar-option');
-        if (!target || target.classList.contains('avatar-option')) return;
+        if (!target
+            || target.classList.contains('avatar-option')
+            || target.classList.contains('option-btn')
+            || target.classList.contains('card-btn')
+            || target.classList.contains('memory-seq-btn')) return;
         activateAudioContext();
         addRipple(target, event);
         playSound('click');
@@ -1031,6 +1034,10 @@ function animateLoadingSequence() {
     const percent = document.getElementById('loadingPercent');
     const hint = document.getElementById('loadingHint');
     if (!overlay || !progress || !percent || !hint) return;
+    if (prefersReducedMotion()) {
+        overlay.classList.add('hidden');
+        return;
+    }
     clearLoadingTimers();
     [18, 44, 71, 100].forEach((value, index) => {
         const timerId = setTimeout(() => {
@@ -1177,18 +1184,11 @@ function playSound(kind) {
     activateAudioContext();
     if (!state.settings.soundEnabled || !audioContext) return;
     if (audioContext.state === 'suspended') {
-        pendingSoundKind = kind;
         if (!audioResumePromise) {
             audioResumePromise = audioContext.resume().catch(() => {}).finally(() => {
                 audioResumePromise = null;
             });
         }
-        audioResumePromise.then(() => {
-            if (audioContext?.state !== 'running' || !pendingSoundKind) return;
-            const replayKind = pendingSoundKind;
-            pendingSoundKind = null;
-            playSound(replayKind);
-        });
         return;
     }
     if (kind === 'click') playTone(520, 0.05, 'triangle', 0.018);
