@@ -112,6 +112,7 @@ let musicIntervalId = null;
 let loadingTimeoutIds = [];
 let overlayHideTimeoutId = null;
 let audioResumePromise = null;
+let pendingSoundKind = null;
 
 function defaultState() {
     return {
@@ -272,12 +273,12 @@ function bindEvents() {
         syncMusic();
         renderAll();
         playSound('success');
-        alert('Settings saved!');
+        showToast('Settings saved!', 'success');
     });
 
     document.addEventListener('click', (event) => {
         const target = event.target.closest('button, .pill, .avatar-option');
-        if (!target) return;
+        if (!target || target.classList.contains('avatar-option')) return;
         activateAudioContext();
         addRipple(target, event);
         playSound('click');
@@ -1008,6 +1009,7 @@ function renderAvatarOptions() {
                 option.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
             });
             updateAvatarPreview();
+            playSound('click');
         });
         wrap.appendChild(btn);
     });
@@ -1175,13 +1177,17 @@ function playSound(kind) {
     activateAudioContext();
     if (!state.settings.soundEnabled || !audioContext) return;
     if (audioContext.state === 'suspended') {
+        pendingSoundKind = kind;
         if (!audioResumePromise) {
             audioResumePromise = audioContext.resume().catch(() => {}).finally(() => {
                 audioResumePromise = null;
             });
         }
         audioResumePromise.then(() => {
-            if (audioContext?.state === 'running') playSound(kind);
+            if (audioContext?.state !== 'running' || !pendingSoundKind) return;
+            const replayKind = pendingSoundKind;
+            pendingSoundKind = null;
+            playSound(replayKind);
         });
         return;
     }
