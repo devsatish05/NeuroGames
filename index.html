@@ -11,7 +11,7 @@
 </head>
 <body>
     <div class="stars-background"></div>
-    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-labelledby="loadingTitle" aria-describedby="loadingHint" aria-live="polite">
+    <div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-labelledby="loadingTitle" aria-describedby="loadingHint" aria-live="polite" aria-hidden="false">
         <div class="loading-card">
             <div class="loader-orbit" aria-hidden="true">
                 <span></span><span></span><span></span>
@@ -24,6 +24,7 @@
     </div>
     <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
     <div id="fxLayer" class="fx-layer" aria-hidden="true"></div>
+    <div id="transitionStatus" class="sr-only" aria-live="polite" aria-atomic="true"></div>
     <div class="app-shell">
         <header class="topbar">
             <div>

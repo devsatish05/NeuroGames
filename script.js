@@ -210,7 +210,7 @@ function showScreen(screenId) {
     const activeScreen = document.getElementById(screenId);
     const focusTarget = activeScreen?.querySelector('h2') || activeScreen;
     setAppTheme(currentSession?.category && ['gamePlay', 'resultsScreen'].includes(screenId) ? currentSession.category : THEME_BY_SCREEN[screenId] || 'home');
-    pulseLoadingHint(screenId);
+    announceScreenChange(screenId);
     window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     if (focusTarget) {
         focusTarget.setAttribute('tabindex', '-1');
@@ -261,6 +261,7 @@ function bindEvents() {
     });
     document.getElementById('avatarColorSelect').addEventListener('change', updateAvatarPreview);
     document.getElementById('avatarAccessorySelect').addEventListener('change', updateAvatarPreview);
+    document.addEventListener('visibilitychange', syncMusic);
 
     document.getElementById('saveSettingsBtn').addEventListener('click', () => {
         state.settings.notifications = document.getElementById('notifyToggle').checked;
@@ -347,25 +348,25 @@ function renderDashboard() {
     const syncText = profile.sessions.length ? new Date(profile.sessions[profile.sessions.length - 1].date).toLocaleString() : 'Waiting for first session';
 
     const metricItems = [
-        { label: 'IQ Growth', detail: `${formatPercent(iqGrowth)} up from session 1`, ringValue: clampNumber(Math.abs(iqGrowth), 0, 100), themeClass: 'iq', icon: '🧠', count: iqGrowth, suffix: '%' },
-        { label: 'Memory Growth', detail: `${formatPercent(memoryGrowth)} up from session 1`, ringValue: clampNumber(Math.abs(memoryGrowth), 0, 100), themeClass: 'memory', icon: '🎴', count: memoryGrowth, suffix: '%' },
-        { label: 'Pattern Growth', detail: `${formatPercent(patternGrowth)} up from session 1`, ringValue: clampNumber(Math.abs(patternGrowth), 0, 100), themeClass: 'pattern', icon: '🧩', count: patternGrowth, suffix: '%' },
-        { label: 'Live Sync', detail: syncText, ringValue: profile.sessions.length ? 100 : 15, themeClass: 'behavior', icon: '📡', textValue: profile.sessions.length ? 'LIVE' : 'WAIT' },
-        { label: 'XP', detail: `${profile.totalXp} XP`, ringValue: clampNumber(profile.totalXp / 10, 0, 100), themeClass: 'general', icon: '✨', count: profile.totalXp, suffix: ' XP' },
-        { label: 'Level', detail: `Level ${profile.level}/5`, ringValue: profile.level * 20, themeClass: 'general', icon: '🏅', count: profile.level, suffix: '/5' }
+        formatGrowthMetric('IQ Growth', iqGrowth, 'iq', '🧠'),
+        formatGrowthMetric('Memory Growth', memoryGrowth, 'memory', '🎴'),
+        formatGrowthMetric('Pattern Growth', patternGrowth, 'pattern', '🧩'),
+        { label: 'Live Sync', detail: syncText, ringValue: profile.sessions.length ? 100 : 15, themeClass: 'behavior', icon: '📡', textValue: profile.sessions.length ? 'LIVE' : 'WAIT', ringLabel: profile.sessions.length ? 'ON' : '...' },
+        { label: 'XP', detail: `${profile.totalXp} XP`, ringValue: clampNumber(profile.totalXp / 10, 0, 100), themeClass: 'general', icon: '✨', count: profile.totalXp, suffix: ' XP', prefix: '', ringLabel: `${clampNumber(profile.totalXp / 10, 0, 100)}%` },
+        { label: 'Level', detail: `Level ${profile.level}/5`, ringValue: profile.level * 20, themeClass: 'general', icon: '🏅', count: profile.level, suffix: '/5', prefix: '', ringLabel: `${profile.level}/5` }
     ];
 
-    metricsGrid.innerHTML = metricItems.map(({ label, detail, ringValue, themeClass, icon, count, suffix = '', textValue }) => `
+    metricsGrid.innerHTML = metricItems.map(({ label, detail, ringValue, themeClass, icon, count, suffix = '', prefix = '', textValue, ringLabel }) => `
         <div class="metric ${themeClass}">
             <div class="metric-top">
                 <div>
                     <div>${icon} ${label}</div>
                     ${Number.isFinite(count)
-                        ? `<strong class="count-up" data-counter="${count}" data-suffix="${suffix}" data-sign="${count > 0 && suffix === '%' ? '+' : ''}">0${suffix}</strong>`
+                        ? `<strong class="count-up" data-counter="${count}" data-suffix="${suffix}" data-sign="${prefix}">0${suffix}</strong>`
                         : `<strong>${textValue || detail}</strong>`}
                 </div>
                 <div class="metric-circle" style="--ring-value:${ringValue}">
-                    <span>${ringValue}%</span>
+                    <span>${ringLabel || `${ringValue}%`}</span>
                 </div>
             </div>
             <small>${detail}</small>
@@ -1035,10 +1036,11 @@ function animateLoadingSequence() {
     const hint = document.getElementById('loadingHint');
     if (!overlay || !progress || !percent || !hint) return;
     if (prefersReducedMotion()) {
-        overlay.classList.add('hidden');
+        setLoadingOverlayVisible(false);
         return;
     }
     clearLoadingTimers();
+    setLoadingOverlayVisible(true);
     [18, 44, 71, 100].forEach((value, index) => {
         const timerId = setTimeout(() => {
             progress.style.width = `${value}%`;
@@ -1047,21 +1049,13 @@ function animateLoadingSequence() {
         }, index * 220);
         loadingTimeoutIds.push(timerId);
     });
-    overlayHideTimeoutId = setTimeout(() => overlay.classList.add('hidden'), 1100);
+    overlayHideTimeoutId = setTimeout(() => setLoadingOverlayVisible(false), 1100);
 }
 
-function pulseLoadingHint(screenId) {
-    const overlay = document.getElementById('loadingOverlay');
-    const hint = document.getElementById('loadingHint');
-    const progress = document.getElementById('loadingProgress');
-    const percent = document.getElementById('loadingPercent');
-    if (!overlay || !hint || !progress || !percent || prefersReducedMotion()) return;
-    clearLoadingTimers();
-    overlay.classList.remove('hidden');
-    hint.textContent = `Opening ${screenLabel(screenId)}...`;
-    progress.style.width = '100%';
-    percent.textContent = '100%';
-    overlayHideTimeoutId = setTimeout(() => overlay.classList.add('hidden'), 260);
+function announceScreenChange(screenId) {
+    const status = document.getElementById('transitionStatus');
+    if (!status) return;
+    status.textContent = `Opened ${screenLabel(screenId)}.`;
 }
 
 function screenLabel(screenId) {
@@ -1159,6 +1153,13 @@ function clearLoadingTimers() {
     }
 }
 
+function setLoadingOverlayVisible(isVisible) {
+    const overlay = document.getElementById('loadingOverlay');
+    if (!overlay) return;
+    overlay.classList.toggle('hidden', !isVisible);
+    overlay.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+}
+
 function activateAudioContext() {
     if (audioContext || typeof window.AudioContext === 'undefined' && typeof window.webkitAudioContext === 'undefined') return;
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -1201,7 +1202,7 @@ function playSound(kind) {
 }
 
 function syncMusic() {
-    if (!state.settings.musicEnabled || !state.settings.soundEnabled) {
+    if (!state.settings.musicEnabled || !state.settings.soundEnabled || document.hidden) {
         if (musicIntervalId) clearInterval(musicIntervalId);
         musicIntervalId = null;
         return;
@@ -1219,6 +1220,21 @@ function syncMusic() {
 
 function prefersReducedMotion() {
     return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function formatGrowthMetric(label, rawValue, themeClass, icon) {
+    const ringValue = clampNumber(Math.abs(rawValue), 0, 100);
+    return {
+        label,
+        detail: `${formatPercent(rawValue)} up from session 1`,
+        ringValue,
+        themeClass,
+        icon,
+        count: rawValue,
+        suffix: '%',
+        prefix: rawValue > 0 ? '+' : '',
+        ringLabel: `${ringValue}%`
+    };
 }
 
 function clampNumber(value, min, max) {
